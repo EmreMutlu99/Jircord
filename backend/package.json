@@ -1,0 +1,20 @@
+{
+    "name": "jirc-back",
+    "version": "1.0.0",
+    "scripts": {
+      "dev": "ts-node-dev --respawn src/index.ts"
+    },
+    "dependencies": {
+      "cors": "^2.8.5",
+      "express": "^4.18.2",
+      "socket.io": "^4.7.2"
+    },
+    "devDependencies": {
+      "@types/cors": "^2.8.12",
+      "@types/express": "^4.17.17",
+      "@types/node": "^20.4.2",
+      "ts-node-dev": "^2.0.0",
+      "typescript": "^5.1.6"
+    }
+  }
+  
