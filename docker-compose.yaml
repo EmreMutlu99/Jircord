@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: jirc_user
+      POSTGRES_PASSWORD: jirc_pass
+      POSTGRES_DB: jirc_db
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: npm run start             # ts-node-dev --respawn --transpile-only src/index.ts
+    volumes:
+      - ./backend:/app                # mount code
+      - /app/node_modules              # keep container’s node_modules
+    environment:
+      DATABASE_URL: postgres://jirc_user:jirc_pass@db:5432/jirc_db
+      JWT_SECRET: super-secret
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: ./front_end
+      dockerfile: Dockerfile
+    command: npm run dev               # vite dev
+    volumes:
+      - ./front_end:/app               # mount code
+      - /app/node_modules              # keep container’s node_modules
+    environment:
+      VITE_API_BASE: http://localhost:3000
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
+volumes:
+  db-data:

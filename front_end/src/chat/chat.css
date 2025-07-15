@@ -1,0 +1,23 @@
+/* sidebar adjustments */
+.sidebar {
+    width: 200px;
+    background: #2f3136;
+    padding: 10px;
+  }
+  .users-header {
+    margin: 16px 0 8px;
+    color: #b9bbbe;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+  .channel {
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #dcddde;
+  }
+  .channel:hover,
+  .channel.active {
+    background: #40444b;
+  }
+  

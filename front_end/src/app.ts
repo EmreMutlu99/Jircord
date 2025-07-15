@@ -1,33 +1,31 @@
-export function setupApp() {
-    const app = document.querySelector<HTMLDivElement>('#app')!
-    app.innerHTML = `
-      <div class="sidebar">
-        <div class="channel"># general</div>
-        <div class="channel"># random</div>
-      </div>
-      <div class="chat">
-        <div class="chat-header"># general</div>
-        <div class="chat-messages" id="chat-messages">
-          <div>User1: Hello!</div>
-          <div>User2: Hey there!</div>
-        </div>
-        <div class="chat-input">
-          <input type="text" id="chat-input" placeholder="Type your message..." />
-        </div>
-      </div>
-    `
-  
-    const input = document.getElementById('chat-input') as HTMLInputElement
-    const messages = document.getElementById('chat-messages')!
-  
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && input.value.trim()) {
-        const msg = document.createElement('div')
-        msg.textContent = `You: ${input.value}`
-        messages.appendChild(msg)
-        input.value = ''
-        messages.scrollTop = messages.scrollHeight
-      }
-    })
+import './style.css'
+import { showLogin } from './login/login'
+import { setupChat } from './chat/chat'
+
+const API_BASE = 'http://localhost:3000'  // adjust for production
+
+export async function setupApp() {
+  const token = localStorage.getItem('jwt')
+
+  if (token) {
+    try {
+      // Verify token & get user info
+      const resp = await fetch(`${API_BASE}/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!resp.ok) throw new Error('Invalid token')
+
+      const { user } = await resp.json() as { user: { username: string } }
+      setupChat(user.username)
+      return
+    } catch {
+      // Token invalid or /me failed → drop it
+      localStorage.removeItem('jwt')
+    }
   }
-  
+
+  // No token or invalid → show login form
+  showLogin(async (username) => {
+    setupChat(username)
+  })
+}

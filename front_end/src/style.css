@@ -56,3 +56,32 @@ body {
   border: none;
   border-radius: 5px;
 }
+
+/* logout button in chat header */
+.logout-btn {
+  margin-left: auto;
+  padding: 4px 8px;
+  background: #f04747;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.logout-btn:hover {
+  background: #c33c3c;
+}
+.logout-btn:active {
+  background: #992f2f;
+}
+
+/* adjust chat-header layout */
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: #2f3136;
+  color: #ffffff;
+}
