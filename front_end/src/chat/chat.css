@@ -5,6 +5,8 @@
   padding: 12px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between; /* pushes bottom section down */
+  height: 100vh; /* full height */
 }
 
 .users-header {
@@ -61,6 +63,7 @@
   background: #36393f;
   display: flex;
   flex-direction: column;
+  min-width: 0; /* critical: prevents flex children from overflowing horizontally */
 }
 
 .chat-header {
@@ -126,8 +129,8 @@
 
 /* Message content (username, timestamp, text) */
 .message-content {
-  display: flex;
-  flex-direction: column;
+  display: inline-block; /* shrink to fit content */
+  max-width: 80%; /* prevent it from being too wide */
 }
 
 .message-header {
@@ -152,7 +155,25 @@
   font-size: 15px;
   line-height: 1.4;
   margin-top: 2px;
+  white-space: pre-wrap; /* preserve spaces & wrap */
+  word-wrap: break-word; /* break long words */
+  overflow-wrap: break-word; /* for modern browsers */
+  max-width: 100%;
 }
+
+.message-text a {
+  color: #3a8bfd; /* bright blue */
+  text-decoration: none;
+}
+
+.message-text a:hover {
+  text-decoration: underline;
+}
+
+.message-text a:visited {
+  color: #3a8bfd;
+}
+
 
 .message .message-text:not(:first-child) {
   margin-left: 2px; /* tiny indent */
@@ -162,14 +183,24 @@
 
 
 /* ---- Input ---- */
+
 .chat-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
   padding: 12px;
   background: #2f3136;
   border-top: 1px solid #202225;
+  width: 100%; /* ensure full width */
+  box-sizing: border-box; /* padding included in width */
 }
 
-.chat-input input {
-  width: 100%;
+.chat-input textarea {
+  flex: 1; /* take all remaining space */
+  height: 40px;
+  min-height: 40px;
+  max-height: 150px;
+  resize: none;
   padding: 10px 14px;
   border-radius: 6px;
   border: none;
@@ -177,11 +208,27 @@
   font-size: 14px;
   background: #40444b;
   color: white;
+  line-height: 1.4;
+  overflow-y: auto;
 }
 
-.chat-input input::placeholder {
-  color: #b9bbbe;
+.send-btn {
+  background: #5865f2;
+  color: white;
+  border: none;
+  padding: 0 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  height: 40px;
+  flex-shrink: 0;
 }
+
+.send-btn:hover {
+  background: #4752c4;
+}
+
+
 
 
 /* ---- Scrollbar ---- */
@@ -207,4 +254,216 @@
 .chat-messages {
   scrollbar-width: thin;
   scrollbar-color: #202225 #2f3136; /* thumb, track */
+
+   /* Prevent horizontal overflow */
+  white-space: pre-wrap;       /* wrap text normally */
+  word-break: break-word;      /* break long words */
+  overflow-wrap: break-word;   /* extra safe */
+  max-width: 100%;             /* stay inside chat zone */
+  box-sizing: border-box;      /* padding inside width */
 }
+
+/* Emoji / GIF / Action Buttons in Chat Input */
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: #b9bbbe;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  transition: background 0.2s, color 0.2s;
+}
+
+.icon-btn:hover {
+  background: #3a3c43;
+  color: #fff;
+}
+
+.emoji-btn {
+  font-size: 20px; /* slightly larger for emoji */
+}
+
+.chat-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #2f3136;
+  padding: 8px;
+  border-top: 1px solid #202225;
+}
+
+.chat-input textarea {
+  flex: 1;
+  resize: none;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: none;
+  outline: none;
+  background: #40444b;
+  color: white;
+  font-size: 14px;
+}
+
+
+
+/* ---- user profile bar ---- */
+.user-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #292b2f;
+  padding: 8px;
+  border-top: 1px solid #202225;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-avatar {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  background: #5865f2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-text {
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.user-avatar .status-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  border: 2px solid #292b2f;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 600;
+  color: white;
+  font-size: 14px;
+}
+
+.user-status {
+  font-size: 12px;
+  color: #b9bbbe;
+}
+
+.user-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.user-actions button {
+  background: none;
+  border: none;
+  color: #b9bbbe;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.user-actions button:hover {
+  color: white;
+}
+
+
+/* ---- Link Preview ---- */
+
+.link-preview {
+  margin-top: 6px;
+  width: auto;
+  display: inline-block; /* compact fit */
+}
+
+.link-preview iframe {
+  width: 280px; /* smaller preview */
+  height: 158px;
+  border: none;
+  border-radius: 6px;
+}
+
+.link-preview img {
+  width: 280px;
+  border-radius: 6px;
+  display: block;
+}
+
+.embed-card {
+  background: #2f3136;
+  border: 1px solid #202225;
+  border-radius: 6px;
+  padding: 8px;
+  max-width: 500px;
+  margin: 8px auto; /* center horizontally */
+}
+
+.embed-header {
+  font-size: 12px;
+  color: #b9bbbe;
+  margin-bottom: 8px;
+}
+
+/* Centers the video */
+.embed-video {
+  display: flex;
+  justify-content: center;
+}
+
+/* Keeps proper aspect ratio */
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding-bottom: 56.25%; /* 16:9 ratio */
+  height: 0;
+}
+
+.video-wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+/*------Reaction Bar--------*/
+.reaction-bar {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.reaction-add,
+.reaction-btn {
+  background: #4f545c;
+  border: none;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 14px;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reaction-btn:hover,
+.reaction-add:hover {
+  background: #5865f2;
+}
+

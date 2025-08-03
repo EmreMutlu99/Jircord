@@ -1,6 +1,7 @@
 import io from "socket.io-client";
 import { setupApp } from "../app";
 import "./chat.css";
+import "emoji-picker-element/index.js";
 
 export function setupChat(username: string) {
   const token = localStorage.getItem("jwt")!;
@@ -10,22 +11,95 @@ export function setupChat(username: string) {
   // --- DOM shell ---
   const app = document.querySelector<HTMLDivElement>("#app")!;
   app.innerHTML = `
-    <div class="sidebar">
+  <div class="sidebar">
+    <div class="sidebar-top">
       <div class="channel global-btn" data-target=""># Global</div>
       <div class="users-header">Direct Messages</div>
       <div id="user-list"></div>
     </div>
-    <div class="chat">
-      <div class="chat-header">
-        <span id="chat-title"># Global</span>
-        <button id="logout-btn" class="logout-btn">Logout</button>
+
+    <div class="user-bar">
+      <div class="user-info">
+        <div class="user-avatar">
+          <span class="status-dot online-dot"></span>
+          <span class="avatar-text">A</span>
+        </div>
+        <div class="user-details">
+          <div class="user-name">Alice</div>
+          <div class="user-status">Online</div>
+        </div>
       </div>
-      <div class="chat-messages" id="chat-messages"></div>
-      <div class="chat-input">
-        <input type="text" id="chat-input" placeholder="Type your message..." />
+      <div class="user-actions">
+        <button title="Mute"><i class="mic-icon">🎤</i></button>
+        <button title="Deafen"><i class="headset-icon">🎧</i></button>
+        <button title="Settings"><i class="settings-icon">⚙️</i></button>
       </div>
     </div>
-  `;
+  </div>
+
+  <div class="chat">
+    <div class="chat-header">
+      <span id="chat-title"># Global</span>
+      <button id="logout-btn" class="logout-btn">Logout</button>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input">
+      <textarea id="chat-input" placeholder="Type your message..."></textarea>
+      <button id="emoji-btn" class="icon-btn">😊</button>
+      <button id="send-btn" class="send-btn">➤</button>
+    </div>
+    </div>
+  </div>
+`;
+
+  const textarea = document.getElementById("chat-input") as HTMLTextAreaElement;
+  const sendBtn = document.getElementById("send-btn") as HTMLButtonElement;
+
+  const emojiBtn = document.getElementById("emoji-btn")!;
+
+  // --- Emoji Picker Setup ---
+  const picker = document.createElement("emoji-picker");
+  picker.style.position = "absolute";
+  picker.style.bottom = "70px";
+  picker.style.left = "60px";
+  picker.style.display = "none";
+  document.body.appendChild(picker);
+
+  emojiBtn.addEventListener("click", () => {
+    picker.style.display = picker.style.display === "none" ? "block" : "none";
+  });
+
+  picker.addEventListener("emoji-click", (event: any) => {
+    textarea.value += event.detail.unicode;
+    picker.style.display = "none";
+    textarea.focus();
+  });
+
+  // Auto-expand textarea
+  textarea.addEventListener("input", () => {
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + "px";
+  });
+
+  // Send on button click
+  sendBtn.addEventListener("click", () => {
+    if (textarea.value.trim()) {
+      socket.emit("chat:message", {
+        to: currentTarget,
+        text: textarea.value.trim(),
+      });
+      textarea.value = "";
+      textarea.style.height = "40px"; // reset height
+    }
+  });
+
+  // Optional: Send on Enter (Shift+Enter for newline)
+  textarea.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendBtn.click();
+    }
+  });
 
   const userList = document.getElementById("user-list")!;
   const chatTitle = document.getElementById("chat-title")!;
@@ -91,6 +165,67 @@ export function setupChat(username: string) {
     );
   }
 
+  function linkify(text: string) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlRegex, (url) => {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+    });
+  }
+
+  function createPreview(url: string) {
+    // Image preview
+    if (/\.(jpg|jpeg|png|gif|webp)$/i.test(url)) {
+      return `<div class="link-preview"><img src="${url}" alt="preview"></div>`;
+    }
+
+    // YouTube
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
+    if (ytMatch) {
+      return `
+        <div class="embed-card">
+          <div class="embed-header">YouTube</div>
+          <div class="embed-video">
+            <div class="video-wrapper">
+              <iframe
+                src="https://www.youtube.com/embed/${ytMatch[1]}"
+                frameborder="0"
+                allowfullscreen>
+              </iframe>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Twitter / X
+    if (/^https?:\/\/(www\.)?(twitter\.com|x\.com)\//.test(url)) {
+      return `
+        <blockquote class="twitter-tweet">
+          <a href="${url}"></a>
+        </blockquote>
+        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+      `;
+    }
+
+    // Instagram
+    if (/^https?:\/\/(www\.)?instagram\.com\//.test(url)) {
+      return `
+        <blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14"></blockquote>
+        <script async src="//www.instagram.com/embed.js"></script>
+      `;
+    }
+
+    // Reddit
+    if (/^https?:\/\/(www\.)?reddit\.com\//.test(url)) {
+      return `
+        <div class="embed-card">
+          <div class="embed-header">Reddit</div>
+          <a href="${url}" target="_blank" class="embed-title">${url}</a>
+        </div>
+      `;
+    }
+  }
+
   function appendMessage(msg: {
     from: string;
     text: string;
@@ -100,20 +235,27 @@ export function setupChat(username: string) {
     const dateObj = msg.createdAt ? new Date(msg.createdAt) : new Date();
     const currentMinute = dateObj.toISOString().slice(0, 16); // yyyy-mm-ddThh:mm
 
-    // Check if same user & same minute
+    // Detect URLs for linkify & previews
+    const urls = msg.text.match(/https?:\/\/[^\s]+/g) || [];
+    const linkedText = linkify(msg.text);
+    let previewHTML = "";
+    urls.forEach((url) => {
+      previewHTML += createPreview(url);
+    });
+
     if (msg.from === lastMessageUser && currentMinute === lastMessageTime) {
-      // Append just the text line (no avatar, no username)
+      // Append just text & previews to last block
       const lastMessageBlock = messages.lastElementChild;
       if (lastMessageBlock) {
         const textDiv = document.createElement("div");
         textDiv.classList.add("message-text");
-        textDiv.textContent = msg.text;
+        textDiv.innerHTML = linkedText + previewHTML;
         lastMessageBlock
           .querySelector(".message-content")
           ?.appendChild(textDiv);
       }
     } else {
-      // Create a full message block
+      // Create new message block
       const messageWrapper = document.createElement("div");
       messageWrapper.classList.add("message");
 
@@ -122,11 +264,11 @@ export function setupChat(username: string) {
       avatar.classList.add("avatar");
       avatar.textContent = msg.from.charAt(0).toUpperCase();
 
-      // Message content container
+      // Content container
       const content = document.createElement("div");
       content.classList.add("message-content");
 
-      // Header (username + timestamp)
+      // Header
       const header = document.createElement("div");
       header.classList.add("message-header");
 
@@ -141,25 +283,74 @@ export function setupChat(username: string) {
       header.appendChild(nameSpan);
       header.appendChild(timeSpan);
 
-      // Message text
+      // Message text + previews
       const textDiv = document.createElement("div");
       textDiv.classList.add("message-text");
-      textDiv.textContent = msg.text;
+      textDiv.innerHTML = linkedText + previewHTML;
 
-      // Assemble
       content.appendChild(header);
       content.appendChild(textDiv);
       messageWrapper.appendChild(avatar);
       messageWrapper.appendChild(content);
 
       messages.appendChild(messageWrapper);
+      const reactionBar = document.createElement("div");
+      reactionBar.classList.add("reaction-bar");
+
+      const addReactionBtn = document.createElement("button");
+      addReactionBtn.classList.add("reaction-add");
+      addReactionBtn.textContent = "➕";
+      reactionBar.appendChild(addReactionBtn);
+
+      addReactionBtn.addEventListener("click", (e) => {
+        e.stopPropagation(); // Prevent other click events
+
+        // Remove any existing picker before opening a new one
+        document.querySelectorAll("emoji-picker").forEach((p) => p.remove());
+
+        const picker = document.createElement("emoji-picker");
+        picker.style.position = "absolute";
+        picker.style.zIndex = "9999";
+
+        // Position near the clicked button
+        const rect = addReactionBtn.getBoundingClientRect();
+        picker.style.top = `${rect.top - 350}px`; // adjust height of picker
+        picker.style.left = `${rect.left}px`;
+
+        // Append to body so it's global, not inside scrolling chat
+        document.body.appendChild(picker);
+
+        // Handle emoji selection
+        picker.addEventListener("emoji-click", (event: any) => {
+          const emoji = event.detail.unicode;
+
+          const btn = document.createElement("button");
+          btn.classList.add("reaction-btn");
+          btn.textContent = emoji;
+          reactionBar.insertBefore(btn, addReactionBtn);
+
+          picker.remove();
+        });
+
+        // Close picker when clicking elsewhere
+        const closePicker = (ev: MouseEvent) => {
+          if (!picker.contains(ev.target as Node)) {
+            picker.remove();
+            document.removeEventListener("click", closePicker);
+          }
+        };
+        setTimeout(() => {
+          document.addEventListener("click", closePicker);
+        }, 0);
+      });
+
+      // Append to message
+      content.appendChild(reactionBar);
     }
 
-    // Update tracking
     lastMessageUser = msg.from;
     lastMessageTime = currentMinute;
 
-    // Auto-scroll
     messages.scrollTop = messages.scrollHeight;
   }
 
@@ -190,10 +381,10 @@ export function setupChat(username: string) {
   });
 
   socket.on("chat:message", (msg) => {
-  if (!msg.to || msg.to === username || msg.from === username) {
-    appendMessage(msg); // now uses the Discord-style + grouping
-  }
-});
+    if (!msg.to || msg.to === username || msg.from === username) {
+      appendMessage(msg); // now uses the Discord-style + grouping
+    }
+  });
 
   // Listen for full history list
   socket.on(
