@@ -85,17 +85,26 @@ io.use((socket, next) => {
   }
 });
 
-io.on("connection", (socket: Socket) => {
+io.on("connection", async (socket: Socket) => {
   const username = socket.data.user as string;
-  console.log(`🟢 ${username} connected (socket ${socket.id})`);
 
-  // add to onlineUsers
+  // Fetch ALL registered users from DB
+  const allUsers = await prisma.user.findMany({
+    select: { username: true }
+  });
+
+  // Send list to the connected client
+  socket.emit("users:all", allUsers.map((u: { username: any; }) => u.username));
+
+  // Your existing online users logic...
   let set = onlineUsers.get(username);
   if (!set) {
     set = new Set();
     onlineUsers.set(username, set);
   }
   set.add(socket);
+
+  // Still send online updates as before
   io.emit("users:update", Array.from(onlineUsers.keys()));
 
   // handle chat messages
@@ -161,6 +170,7 @@ io.on("connection", (socket: Socket) => {
     });
     socket.emit("messages:list", messages);
   });
+  
 });
 
 const PORT = process.env.PORT || 3000;

@@ -1,23 +1,54 @@
-/* sidebar adjustments */
+/* Sidebar adjustments */
 .sidebar {
-    width: 200px;
-    background: #2f3136;
-    padding: 10px;
-  }
-  .users-header {
-    margin: 16px 0 8px;
-    color: #b9bbbe;
-    font-size: 12px;
-    text-transform: uppercase;
-  }
-  .channel {
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    color: #dcddde;
-  }
-  .channel:hover,
-  .channel.active {
-    background: #40444b;
-  }
-  
+  width: 200px;
+  background: #2f3136;
+  padding: 10px;
+}
+
+.users-header {
+  margin: 16px 0 8px;
+  color: #b9bbbe;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+/* Channel / user entry */
+.channel {
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #dcddde;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  gap: 6px;
+}
+
+.channel:hover,
+.channel.active {
+  background: #40444b;
+}
+
+/* Status indicator */
+.status-dot {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.online-dot {
+  background-color: #43b581; /* Discord green */
+}
+
+.offline-dot {
+  background-color: #747f8d; /* Discord gray */
+}
+
+/* Username styling */
+.user-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
