@@ -1,23 +1,16 @@
-# Stage 1: install dependencies & build
-FROM node:18-alpine AS build
+# Stage 1: install dependencies
+FROM node:18-alpine AS deps
 WORKDIR /app
-
 COPY package*.json tsconfig.json ./
+COPY prisma ./prisma
+
 RUN npm install
+RUN npx prisma generate
 
-COPY src ./src
-
-RUN npm run build
-RUN npm install          
-
-# Stage 2: runtime
-FROM node:18-alpine
+# Stage 2: development runtime
+FROM node:18-alpine AS dev
 WORKDIR /app
-
-COPY package*.json ./
-RUN npm install --production
-
-COPY --from=build /app/dist ./dist
-
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 EXPOSE 3000
-CMD ["npm", "run", "start"]  # uses ts-node-dev
+CMD ["npm", "run", "start"]

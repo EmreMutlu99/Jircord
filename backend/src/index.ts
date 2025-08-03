@@ -5,6 +5,8 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { Server, Socket } from 'socket.io'
 import { requireAuth, signToken, JwtPayload } from './auth/auth'
+import { PrismaClient } from '@prisma/client'
+const prisma = new PrismaClient()
 
 const app = express()
 // allow our Vite frontend + credentials
@@ -16,32 +18,39 @@ interface User { username: string; passwordHash: string }
 const users: User[] = []
 
 async function seedUsers() {
-  for (const { username, password } of [
+  const defaultUsers = [
     { username: 'alice',   password: 'password123' },
     { username: 'bob',     password: 'hunter2'      },
     { username: 'charlie', password: 'qwerty'       },
-  ]) {
-    const hash = await bcrypt.hash(password, 10)
-    users.push({ username, passwordHash: hash })
+  ]
+
+  for (const { username, password } of defaultUsers) {
+    const existing = await prisma.user.findUnique({ where: { username } })
+    if (!existing) {
+      const hash = await bcrypt.hash(password, 10)
+      await prisma.user.create({
+        data: { username, passwordHash: hash }
+      })
+    }
   }
 }
 seedUsers()
 
+
 // — LOGIN: issue JWT —
 app.post('/login', async (req, res) => {
-  const { username, password } = req.body as { username: string; password: string }
-  const user = users.find(u => u.username === username)
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid credentials' })
-  }
+  const { username, password } = req.body
+  const user = await prisma.user.findUnique({ where: { username } })
+  if (!user) return res.status(401).json({ error: 'Invalid credentials' })
+
   const ok = await bcrypt.compare(password, user.passwordHash)
-  if (!ok) {
-    return res.status(401).json({ error: 'Invalid credentials' })
-  }
+  if (!ok) return res.status(401).json({ error: 'Invalid credentials' })
+
   const token = signToken({ username })
   console.log(`🔑 ${username} logged in`)
-  return res.json({ token })
+  res.json({ token })
 })
+
 
 // — /me: verify JWT & return user info —
 app.get('/me', requireAuth, (req, res) => {

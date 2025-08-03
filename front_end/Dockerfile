@@ -1,5 +1,5 @@
 # front_end/Dockerfile
-FROM node:18-slim
+FROM node:22-alpine
 WORKDIR /app
 
 # 1) Copy package manifests & install deps
