@@ -19,3 +19,11 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 }
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  from      String
+  to        String?  // null = public/global message
+  text      String
+  createdAt DateTime @default(now())
+}
