@@ -39,41 +39,129 @@ export function setupChat(username: string) {
   let onlineUsersSet = new Set<string>();
 
   // --- Helpers ---
-  function renderMessages(msgs: { from: string; text: string; to?: string }[]) {
+  function renderMessages(
+    msgs: { from: string; text: string; to?: string; createdAt?: string }[]
+  ) {
     messages.innerHTML = "";
     msgs.forEach((msg) => {
-      const line = document.createElement("div");
-      const prefix = msg.to ? `(DM) ${msg.from}` : msg.from;
-      line.textContent = `${prefix}: ${msg.text}`;
-      messages.appendChild(line);
+      appendMessage(msg); // use the new modern message layout
     });
     messages.scrollTop = messages.scrollHeight;
   }
 
   function renderUserList() {
-  userList.innerHTML = allUsers
-    .filter((u) => u !== username) // exclude yourself
-    .map((u) => {
-      const isOnline = onlineUsersSet.has(u);
-      return `
+    userList.innerHTML = allUsers
+      .filter((u) => u !== username) // exclude yourself
+      .map((u) => {
+        const isOnline = onlineUsersSet.has(u);
+        return `
         <div class="channel dm-btn" data-target="${u}">
-          <span class="status-dot ${isOnline ? "online-dot" : "offline-dot"}"></span>
+          <span class="status-dot ${
+            isOnline ? "online-dot" : "offline-dot"
+          }"></span>
           <span class="user-name">${u}</span>
         </div>
       `;
-    })
-    .join("");
+      })
+      .join("");
 
-  // Bind DM buttons
-  document.querySelectorAll(".dm-btn").forEach((el) => {
-    el.addEventListener("click", () => {
-      currentTarget = el.getAttribute("data-target")!;
-      chatTitle.textContent = currentTarget ? `@${currentTarget}` : "# Global";
-      loadMessages(currentTarget);
+    // Bind DM buttons
+    document.querySelectorAll(".dm-btn").forEach((el) => {
+      el.addEventListener("click", () => {
+        currentTarget = el.getAttribute("data-target")!;
+        chatTitle.textContent = currentTarget
+          ? `@${currentTarget}`
+          : "# Global";
+        loadMessages(currentTarget);
+      });
     });
-  });
-}
+  }
 
+  let lastMessageUser: string | null = null;
+  let lastMessageTime: string | null = null;
+
+  function formatTimestamp(date: Date) {
+    return (
+      date.toLocaleDateString("tr-TR") +
+      " " +
+      date.toLocaleTimeString("tr-TR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
+  }
+
+  function appendMessage(msg: {
+    from: string;
+    text: string;
+    to?: string;
+    createdAt?: string;
+  }) {
+    const dateObj = msg.createdAt ? new Date(msg.createdAt) : new Date();
+    const currentMinute = dateObj.toISOString().slice(0, 16); // yyyy-mm-ddThh:mm
+
+    // Check if same user & same minute
+    if (msg.from === lastMessageUser && currentMinute === lastMessageTime) {
+      // Append just the text line (no avatar, no username)
+      const lastMessageBlock = messages.lastElementChild;
+      if (lastMessageBlock) {
+        const textDiv = document.createElement("div");
+        textDiv.classList.add("message-text");
+        textDiv.textContent = msg.text;
+        lastMessageBlock
+          .querySelector(".message-content")
+          ?.appendChild(textDiv);
+      }
+    } else {
+      // Create a full message block
+      const messageWrapper = document.createElement("div");
+      messageWrapper.classList.add("message");
+
+      // Avatar
+      const avatar = document.createElement("div");
+      avatar.classList.add("avatar");
+      avatar.textContent = msg.from.charAt(0).toUpperCase();
+
+      // Message content container
+      const content = document.createElement("div");
+      content.classList.add("message-content");
+
+      // Header (username + timestamp)
+      const header = document.createElement("div");
+      header.classList.add("message-header");
+
+      const nameSpan = document.createElement("span");
+      nameSpan.classList.add("username");
+      nameSpan.textContent = msg.from;
+
+      const timeSpan = document.createElement("span");
+      timeSpan.classList.add("timestamp");
+      timeSpan.textContent = formatTimestamp(dateObj);
+
+      header.appendChild(nameSpan);
+      header.appendChild(timeSpan);
+
+      // Message text
+      const textDiv = document.createElement("div");
+      textDiv.classList.add("message-text");
+      textDiv.textContent = msg.text;
+
+      // Assemble
+      content.appendChild(header);
+      content.appendChild(textDiv);
+      messageWrapper.appendChild(avatar);
+      messageWrapper.appendChild(content);
+
+      messages.appendChild(messageWrapper);
+    }
+
+    // Update tracking
+    lastMessageUser = msg.from;
+    lastMessageTime = currentMinute;
+
+    // Auto-scroll
+    messages.scrollTop = messages.scrollHeight;
+  }
 
   function loadMessages(target?: string) {
     socket.emit("messages:get", target); // ask backend for history
@@ -101,19 +189,11 @@ export function setupChat(username: string) {
     renderUserList();
   });
 
-  socket.on(
-    "chat:message",
-    (msg: { from: string; text: string; to?: string }) => {
-      if (!msg.to || msg.to === username || msg.from === username) {
-        const line = document.createElement("div");
-        const prefix = msg.to ? `(DM) ${msg.from}` : msg.from;
-        line.textContent = `${prefix}: ${msg.text}`;
-        messages.appendChild(line);
-        messages.scrollTop = messages.scrollHeight;
-        new Audio("/notify.mp3").play().catch(() => {});
-      }
-    }
-  );
+  socket.on("chat:message", (msg) => {
+  if (!msg.to || msg.to === username || msg.from === username) {
+    appendMessage(msg); // now uses the Discord-style + grouping
+  }
+});
 
   // Listen for full history list
   socket.on(
